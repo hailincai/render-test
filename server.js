@@ -1,5 +1,7 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
+const { body, validationResult } = require('express-validator');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -13,26 +15,64 @@ let users = [
   { id: 2, name: 'Bob' },
 ];
 
+const MONGODB_URL = process.env.MONGODB_URL
+mongoose.connect(MONGODB_URL, { useNewUrlParser: true, useUnifiedTopology: true });
+
+const userSchema = new mongoose.Schema({
+    name: String,
+    email: String,
+    dob: String,
+    fanType: String,
+    geoInfo: {
+      ip: String,
+      lat: Number,
+      long: Number
+    },
+    createdAt: Date,
+    expiredAt: Date
+});
+const User = mongoose.model('User', userSchema);
+
+const validateUserInput = [
+    body('name').notEmpty().withMessage('Name is required'),
+    body('email').isEmail().withMessage('Invalid email'),
+    body('dob').notEmpty().withMessage('Date of birth is required'),
+    body('fanType').notEmpty().withMessage('Fan type is required'),
+    body('geoInfo.ip').isIP().withMessage('Invalid IP address'),
+    body('geoInfo.lat').isFloat().withMessage('Invalid latitude'),
+    body('geoInfo.long').isFloat().withMessage('Invalid longitude')
+  ];
+
 // Routes
-app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to the sample API!' });
-});
-
-// GET all users
-app.get('/api/v1/users', (req, res) => {
-  res.json(users);
-});
-
-// GET a specific user
-app.get('/api/users/:id', (req, res) => {
-  const user = users.find(u => u.id === parseInt(req.params.id));
-  if (!user) return res.status(404).json({ message: 'User not found' });
-  res.json(user);
-});
-
-app.post('/api/v1/user', (req, res) => {
-    const jsonpayload = req.body;
-    res.json({ message: 'Data received successfully', data: jsonpayload });
+app.post('/api/v1/user', validateUserInput, async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+  
+    try {
+      const { name, email, dob, fanType, geoInfo } = req.body;
+  
+      // 创建新用户对象，添加 createdAt 和 expiredAt
+      const newUser = new User({
+        name,
+        email,
+        dob,
+        fanType,
+        geoInfo,
+        createdAt: new Date(),
+        expiredAt: new Date(Date.now() + 2 * 60 * 60 * 1000) // 一年后过期
+      });
+  
+      // 保存到数据库
+      const savedUser = await newUser.save();
+  
+      // 返回新创建记录的 ObjectId
+      res.status(201).json({ userId: savedUser._id });
+    } catch (error) {
+      console.error('Error saving user:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
 })
 
 // POST a new user
