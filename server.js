@@ -32,7 +32,7 @@ app.get('/api/users/:id', (req, res) => {
 
 app.post('/api/v1/user', (req, res) => {
     const jsonpayload = req.body;
-    res.json({ message: 'Data received successfully', data: jsonPayload });
+    res.json({ message: 'Data received successfully', data: jsonpayload });
 })
 
 // POST a new user
