@@ -5,7 +5,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Middleware
-app.use(bodyParser.json());
+app.use(express.json());
 
 // Sample data
 let users = [
@@ -19,7 +19,7 @@ app.get('/', (req, res) => {
 });
 
 // GET all users
-app.get('/api/users', (req, res) => {
+app.get('/api/v1/users', (req, res) => {
   res.json(users);
 });
 
@@ -29,6 +29,11 @@ app.get('/api/users/:id', (req, res) => {
   if (!user) return res.status(404).json({ message: 'User not found' });
   res.json(user);
 });
+
+app.post('/api/v1/user', (req, res) => {
+    const jsonpayload = req.body;
+    res.json({ message: 'Data received successfully', data: jsonPayload });
+})
 
 // POST a new user
 app.post('/api/users', (req, res) => {
